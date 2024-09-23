@@ -1,0 +1,51 @@
+#点亮led；
+//库函数；
+
+void LED_Init()
+{
+	GPIO_InitTypeDef GPIO_InitStructure; //定义结构体变量
+	
+	RCC_APB2PeriphClockCmd(LED0_Port_RCC|LED1_Port_RCC,ENABLE); //使能时钟
+	
+	GPIO_InitStructure.GPIO_Pin=LED0_Pin;           //选择设置LED0的IO口
+	GPIO_InitStructure.GPIO_Mode=GPIO_Mode_Out_PP;  //设置推挽输出模式
+	GPIO_InitStructure.GPIO_Speed=GPIO_Speed_50MHz;	//设置传输速率
+	GPIO_Init(LED0_GPIO_Port,&GPIO_InitStructure);  /* 初始化GPIO */
+	GPIO_SetBits(LED0_GPIO_Port, LED0_Pin);         //输出高电平，LED0熄灭
+	
+	GPIO_InitStructure.GPIO_Pin=LED1_Pin;           //选择设置LED1的IO口
+	GPIO_Init(LED1_GPIO_Port,&GPIO_InitStructure);  /* 初始化GPIO */
+	GPIO_SetBits(LED1_GPIO_Port, LED1_Pin);         //输出高电平，LED01熄灭
+}
+int mian(){
+GPIO_SetBits(LED0_GPIO_Port, LED0_Pin);
+GPIO_ResetBits(LED1_GPIO_Port, LED1_Pin);
+delay(6000000);
+GPIO_SetBits(LED1_GPIO_Port, LED1_Pin);
+GPIO_ResetBits(LED0_GPIO_Port, LED0_Pin);
+delay(6000000)；
+}
+
+
+
+
+HAL库：
+GPIO_PinState HAL_GPIO_ReadPin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin);//读取一个引脚的电平
+void HAL_GPIO_WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState);//写一个引脚的电平
+void HAL_GPIO_WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, GPIO_PinState PinState);//翻转一个引脚的电平。
+
+HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_RESET);
+HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_SET);
+HAL_Delay(500);  //HAL库自带的ms级延时函数
+HAL_GPIO_WritePin(LED0_GPIO_Port,LED0_Pin,GPIO_PIN_SET);
+HAL_GPIO_WritePin(LED1_GPIO_Port,LED1_Pin,GPIO_PIN_RESET);
+HAL_Delay(500);
+
+
+
+
+
+
+
+
+
