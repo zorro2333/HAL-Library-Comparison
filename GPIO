@@ -43,7 +43,26 @@ HAL_Delay(500);
 
 
 
+#延时函数说明：
+__weak void HAL_Delay(uint32_t Delay)
+{
+  uint32_t tickstart = HAL_GetTick();
+  uint32_t wait = Delay;
 
+  /* Add a freq to guarantee minimum wait */
+  if (wait < HAL_MAX_DELAY)
+  {
+    wait += (uint32_t)(uwTickFreq);
+  }
+
+  while ((HAL_GetTick() - tickstart) < wait)
+  {
+  }
+}
+//函数是一个弱定义函数，可以重新被定义。
+函数通过HAL_GetTick()获取计数值，计数值1ms加1，直到加到你写入的值，跳出最后的while循环，程序结束。
+uwTickFreq这个值是为1的，也就是说会多延时1ms，这样做是为了防止用户写入延时0ms这种无意义的延时。
+****这个函数是有中断的，不要把这个函数放到自己的中断回调函数里，如果SysTick定时器中断的优先级小于你使用某个中断的优先级这样可能会导致程序卡在HAL_Delay()这个函数里。
 
 
 
