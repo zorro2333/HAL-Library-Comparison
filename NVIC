@@ -1,0 +1,160 @@
+#中断比较
+typedef struct
+{
+  uint8_t NVIC_IRQChannel;                    //中断源
+  uint8_t NVIC_IRQChannelPreemptionPriority;  //抢占优先级
+  uint8_t NVIC_IRQChannelSubPriority;         //响应优先级
+  FunctionalState NVIC_IRQChannelCmd;         //中断使能或失能   
+} NVIC_InitTypeDef;
+void NVIC_Init(NVIC_InitTypeDef* NVIC_InitStruct)
+
+HAL库：
+void HAL_NVIC_SetPriority(IRQn_Type IRQn, uint32_t PreemptPriority, uint32_t SubPriority)
+@parm IRQn_Type：外部中断通道     PreemptPriority：抢占式优先级   SubPriority：响应式优先级
+
+#include "exti.h"
+#include "LED.h"
+
+/*************************************************
+*函数名：   KEY_Init
+*函数功能： 按键初始化
+*输入：     无
+*返回值：   无
+**************************************************/
+void KEY_Init()
+{
+	GPIO_InitTypeDef GPIO_InitStruct;   //GPIO相关结构体
+	
+	RCC_APB2PeriphClockCmd(KEY_UP_RCC|KEY_RCC, ENABLE); //引脚时钟使能
+	
+	//KEY_UP引脚配置
+	GPIO_InitStruct.GPIO_Pin = KEY_UP_Pin;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPD;    //配置为下拉
+	GPIO_Init(KEY_UP_GPIO_Port,&GPIO_InitStruct);
+	
+	//KEY1、KEY0引脚配置
+	GPIO_InitStruct.GPIO_Pin = KEY1_Pin|KEY0_Pin;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU;    //配置为上拉
+	GPIO_Init(KEY_GPIO_Port,&GPIO_InitStruct);
+	
+}
+
+/*************************************************
+*函数名：    My_EXTI_Init（库函数）
+*函数功能：  中断初始化
+*输入：      无
+*返回值：    无
+**************************************************/
+void My_EXTI_Init()
+{
+	NVIC_InitTypeDef NVIC_InitStruct;   //NVIC相关结构体
+	EXTI_InitTypeDef EXTI_InitStruct;   //外部中断相关结构体
+	
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,ENABLE);  //使用中断要打开相应的引脚复用时钟
+	
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource0); //打开KEY_UP引脚的相应通道
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource3); //打开KEY1引脚的相应通道
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOE, GPIO_PinSource4); //打开KEY0引脚的相应通道
+	
+	/* NVIC配置 */
+	//EXTI0配置
+	NVIC_InitStruct.NVIC_IRQChannel = EXTI0_IRQn;         //要打开的中断通道
+	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority =2; //抢占式优先级
+	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 3;       //相应式优先级
+	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;          //NVIC通道使能
+	NVIC_Init(&NVIC_InitStruct);
+	
+	//EXTI3配置
+	NVIC_InitStruct.NVIC_IRQChannel = EXTI3_IRQn;
+	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority =2;
+	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 1;
+	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStruct);
+	
+	//EXTI4配置
+	NVIC_InitStruct.NVIC_IRQChannel = EXTI4_IRQn;
+	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority =2;
+	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0;
+	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStruct);
+	
+	//外部中断配置
+	EXTI_InitStruct.EXTI_Line = EXTI_Line0;              //中断通道选择
+	EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;     //中断响应模式
+	EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;  //上升沿触发中断
+	EXTI_InitStruct.EXTI_LineCmd = ENABLE;               //外部中断使能
+	EXTI_Init(&EXTI_InitStruct);                         //外部中断初始化
+	
+	EXTI_InitStruct.EXTI_Line = EXTI_Line3|EXTI_Line4;   //中断通道选择
+	EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;     //中断响应模式
+	EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Falling; //下降沿触发中断
+	EXTI_InitStruct.EXTI_LineCmd = ENABLE;               //外部中断使能
+	EXTI_Init(&EXTI_InitStruct);                         //外部中断初始化
+	
+}
+
+/*************************************************
+*函数名：    EXTI0_IRQHandler
+*函数功能：  通道0中断函数
+*输入：      无
+*返回值：    无
+**************************************************/
+void EXTI0_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line0) == 1) //检测到中断
+	{
+		if(GPIO_ReadInputDataBit(KEY_UP_GPIO_Port,KEY_UP_Pin)==1)  //检测按键电平
+		{
+		GPIO_ResetBits(LED0_GPIO_Port, LED0_Pin);
+		GPIO_ResetBits(LED1_GPIO_Port, LED1_Pin);
+		}
+	}
+	EXTI_ClearITPendingBit(EXTI_Line0); //清空中断标志位
+}
+
+/*************************************************
+*函数名：    EXTI3_IRQHandler
+*函数功能：  通道3中断函数
+*输入：      无
+*返回值：    无
+**************************************************/
+void EXTI3_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line3) == 1)
+	{
+		if(GPIO_ReadInputDataBit(KEY_GPIO_Port,KEY1_Pin)==0)
+		GPIO_SetBits(LED0_GPIO_Port, LED0_Pin);
+	}
+	EXTI_ClearITPendingBit(EXTI_Line3);
+}
+
+/*************************************************
+*函数名：    EXTI4_IRQHandler
+*函数功能：  通道4中断函数
+*输入：      无
+*返回值：    无
+**************************************************/
+void EXTI4_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line4) == 1)
+	{
+		if(GPIO_ReadInputDataBit(KEY_GPIO_Port,KEY0_Pin)==0)
+		GPIO_SetBits(LED1_GPIO_Port, LED1_Pin);
+	}
+	EXTI_ClearITPendingBit(EXTI_Line4);
+}
+
+
+
+
+
+
+HAL库
+只需在配置完后在主函数加入中断回调函数
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin == GPIO_PIN_0)  //按键按下
+		HAL_GPIO_TogglePin(LED0_GPIO_Port,LED0_Pin); //LED电平翻转
+	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);  //清除中断标志
+}
+
